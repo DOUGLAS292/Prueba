@@ -1,0 +1,106 @@
+# =========================
+# 🐍 PYTHON / FASTAPI
+# =========================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+.venv.bak/
+pip-wheel-metadata/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+pytestdebug.log
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# FastAPI / Uvicorn logs
+*.log
+*.pid
+
+# =========================
+# 🧩 SUPABASE / CONFIG
+# =========================
+
+# Supabase keys or config files
+.env
+.env.*
+supabase/.temp/
+supabase/.branches/
+supabase/.functions-cache/
+supabase/.supabase/
+
+# =========================
+# 🧰 EDITORS / IDEs
+# =========================
+
+# VSCode
+.vscode/
+.code-workspace
+
+# JetBrains (PyCharm, etc.)
+.idea/
+
+# =========================
+# 🪶 SYSTEM FILES
+# =========================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =========================
+# ⚙️ MISC
+# =========================
+
+# Logs and debug
+*.log
+*.bak
+*.swp
+*.swo
+
+# Local scripts or temp data
+tmp/
+temp/
+local/
