@@ -1,53 +1,65 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends, Header
 from typing import Optional
 from app.core.supabase_client import supabase
 from app.schemas.offer import OfferCreate, OfferResponse
+import requests
 
-#router = APIRouter(prefix="/offers", tags=["offers"])
-router = APIRouter(tags=["Offers"])
+router = APIRouter(prefix="/offers", tags=["Offers"])
+
+# 🔹 Dependencia para obtener el usuario actual desde el token
+def get_current_user(authorization: Optional[str] = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Token de autorización no proporcionado")
+
+    token = authorization.replace("Bearer ", "")
+    # ✅ Llamamos a Supabase Auth para verificar el token y obtener el usuario
+    try:
+        resp = requests.get(
+            f"{supabase.supabase_url}/auth/v1/user",
+            headers={"Authorization": f"Bearer {token}", "apikey": supabase.supabase_key},
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=401, detail="Token inválido o expirado")
+
+        user = resp.json()
+        return user
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error verificando usuario: {e}")
 
 
 # -----------------------------
-# 🔹 Crear una nueva oferta
+# 🔹 Crear oferta (requiere login)
 # -----------------------------
 @router.post("/", response_model=OfferResponse)
-def create_offer(payload: OfferCreate):
-    data = payload.dict()
-
-    # ✅ Verificar si el usuario existe
+def create_offer(payload: OfferCreate, user=Depends(get_current_user)):
     try:
-        user_check = supabase.table("users").select("id").eq("id", data["client_id"]).execute()
-        if not user_check.data:
-            # Si no existe, crearlo automáticamente
-            supabase.table("users").insert({
-                "id": data["client_id"],
-                "name": f"Cliente {data['client_id'][:8]}",
-                "email": f"auto_{data['client_id'][:8]}@example.com"
-            }).execute()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error verificando/creando usuario: {e}")
+        user_id = user["id"]
 
-    # ✅ Construir el payload de inserción
-    insert_payload = {
-        "client_id": data["client_id"],
-        "title": data["title"],
-        "description": data.get("description"),
-        "area_m2": data.get("area_m2"),
-        "budget_cop": data.get("budget_cop"),
-    }
+        # ✅ Verificar si el perfil existe
+        profile_check = supabase.table("profiles").select("id").eq("id", user_id).execute()
+        if not profile_check.data:
+            raise HTTPException(status_code=404, detail="El perfil asociado no existe. Por favor crea tu perfil primero.")
 
-    # Si tiene ubicación, la añadimos
-    if data.get("location"):
-        insert_payload["location"] = data["location"]  # Ej: "SRID=4326;POINT(-74.0628 4.6486)"
+        # ✅ Construir payload
+        insert_payload = {
+            "client_id": user_id,
+            "title": payload.title,
+            "description": payload.description,
+            "area_m2": payload.area_m2,
+            "budget_cop": payload.budget_cop,
+            "location": payload.location,
+        }
 
-    # ✅ Insertar en Supabase
-    try:
+        # ✅ Insertar oferta
         resp = supabase.table("offers").insert(insert_payload).execute()
         if not resp.data:
             raise HTTPException(status_code=400, detail="Error creando oferta")
         return resp.data[0]
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error de Supabase: {e}")
+        raise HTTPException(status_code=500, detail=f"Error creando oferta: {e}")
 
 
 # -----------------------------
@@ -69,7 +81,7 @@ def list_offers(limit: int = 50):
 
 
 # -----------------------------
-# 🔹 Buscar ofertas cercanas (RPC)
+# 🔹 Buscar ofertas cercanas
 # -----------------------------
 @router.get("/nearby")
 def offers_nearby(

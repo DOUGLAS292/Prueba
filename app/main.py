@@ -1,11 +1,19 @@
 from fastapi import FastAPI
-from app.routers import profiles, offers
+from fastapi.middleware.cors import CORSMiddleware
+from app.routers import profiles, offers, auth
 
-app = FastAPI(title="Conexión de Independientes")
+app = FastAPI(title="API Ventanería")
 
-app.include_router(profiles.router, prefix="/profiles", tags=["Profiles"])
-app.include_router(offers.router, prefix="/offers", tags=["Offers"])
+# Habilitar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # o ["http://127.0.0.1:5500"] para frontend local
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/")
-def root():
-    return {"message": "API funcionando correctamente 🚀"}
+# Registrar routers
+app.include_router(auth.router)
+app.include_router(profiles.router)
+app.include_router(offers.router)

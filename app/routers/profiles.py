@@ -1,19 +1,51 @@
 from fastapi import APIRouter, HTTPException
 from app.core.supabase_client import supabase
-from app.schemas.profile import Profile
+from app.schemas.profile import ProfileCreate, ProfileResponse
 
-router = APIRouter()
+router = APIRouter(prefix="/profiles", tags=["Profiles"])
 
-@router.post("/", response_model=Profile)
-def create_profile(profile: Profile):
-    result = supabase.table("profiles").insert(profile.dict()).execute()
-    if result.data:
-        return result.data[0]
-    raise HTTPException(status_code=400, detail=result.error_message)
+@router.post("/register", response_model=ProfileResponse)
+def register_user(profile: ProfileCreate):
+    # 1. Crear usuario en auth de Supabase
+    auth_response = supabase.auth.sign_up({
+        "email": profile.email,
+        "password": profile.password
+    })
+    if not auth_response.user:
+        raise HTTPException(status_code=400, detail="Error al registrar usuario")
 
-@router.get("/{user_id}", response_model=Profile)
-def get_profile(user_id: str):
-    result = supabase.table("profiles").select("*").eq("id", user_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Perfil no encontrado")
-    return result.data[0]
+    user_id = auth_response.user.id
+
+    # 2. Crear perfil en la tabla public.profiles
+    data = {
+        "id": user_id,
+        "full_name": profile.full_name,
+        "email": profile.email,
+        "phone": profile.phone,
+        "city": profile.city,
+        
+    
+    }
+
+    supabase.table("profiles").insert(data).execute()
+    return data
+
+
+@router.post("/login")
+def login_user(email: str, password: str):
+    auth_response = supabase.auth.sign_in_with_password({
+        "email": email,
+        "password": password
+    })
+
+    if not auth_response.user:
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+
+    return {
+        "message": "Login exitoso",
+        "user": {
+            "id": auth_response.user.id,
+            "email": auth_response.user.email
+        },
+        "access_token": auth_response.session.access_token
+    }
